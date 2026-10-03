@@ -35,15 +35,20 @@ export const API_URL: string | null = (envApiUrl && envApiUrl.length > 0 ? envAp
   ?.replace(/\/+$/, '') ?? null;
 
 /**
- * Envio de fotos (perfil e grupo) para o Firebase Storage.
- * Desligado enquanto o Storage não estiver ativo no projeto: o app esconde o
- * seletor de foto e todos usam o avatar padrão. Para religar, defina
- * `expo.extra.photoUploadEnabled: true` no app.json.
+ * Envio de fotos (perfil e grupo) para o Cloudinary.
+ * Com `expo.extra.photoUploadEnabled: false` no app.json o app esconde o
+ * seletor de foto e todos usam o avatar padrão.
  */
 export const PHOTO_UPLOAD_ENABLED: boolean = (() => {
   const extra: unknown = Constants.expoConfig?.extra;
   return isRecord(extra) && extra.photoUploadEnabled === true;
 })();
+
+/** Cloud name da conta Cloudinary (`expo.extra.cloudinaryCloudName`). */
+export const CLOUDINARY_CLOUD_NAME: string | null = readExtra('cloudinaryCloudName');
+
+/** Upload preset *unsigned* do Cloudinary (`expo.extra.cloudinaryUploadPreset`). */
+export const CLOUDINARY_UPLOAD_PRESET: string | null = readExtra('cloudinaryUploadPreset');
 
 /** ID do projeto EAS, necessário para gerar o Expo Push Token. */
 export const EAS_PROJECT_ID: string | null = readEasProjectId();

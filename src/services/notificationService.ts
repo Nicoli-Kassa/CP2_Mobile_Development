@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import type * as NotificationsModule from 'expo-notifications';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
@@ -17,6 +18,26 @@ import { getFirebaseFirestore } from './firebase';
  * O envio do push NUNCA acontece aqui: o app só pede à API online
  * (`requestPushNotification`), que calcula os destinatários e envia.
  */
+
+/**
+ * O Expo Go não suporta push remoto desde o SDK 53 e o `expo-notifications`
+ * lança erro já ao ser importado. Por isso o módulo só é carregado fora do
+ * Expo Go; lá, as notificações ficam desativadas e o chat segue funcionando.
+ */
+export const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+let notificationsModule: typeof NotificationsModule | null = null;
+
+function loadNotifications(): typeof NotificationsModule | null {
+  if (IS_EXPO_GO) {
+    return null;
+  }
+  if (!notificationsModule) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    notificationsModule = require('expo-notifications') as typeof NotificationsModule;
+  }
+  return notificationsModule;
+}
 
 export const ANDROID_CHANNEL_ID = 'messages';
 const DEVICE_ID_KEY = 'cp2chat.deviceId';
@@ -47,7 +68,7 @@ export function configureNotificationHandler(): void {
     return;
   }
   handlerConfigured = true;
-  Notifications.setNotificationHandler({
+  loadNotifications()?.setNotificationHandler({
     handleNotification: async (notification) => {
       const data = parseNotificationData(notification.request.content.data);
       const isOpen = data !== null && data.conversationId === activeConversationId;
@@ -62,7 +83,8 @@ export function configureNotificationHandler(): void {
 }
 
 export async function ensureAndroidChannel(): Promise<void> {
-  if (Platform.OS === 'android') {
+  const Notifications = loadNotifications();
+  if (Notifications && Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
       name: 'Mensagens',
       importance: Notifications.AndroidImportance.HIGH,
@@ -73,6 +95,11 @@ export async function ensureAndroidChannel(): Promise<void> {
 
 /** Solicita a permissão (se ainda não foi decidida) e devolve se foi concedida. */
 export async function requestNotificationPermission(): Promise<boolean> {
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    // No Expo Go o aviso de indisponibilidade vem de `getPushToken`.
+    return true;
+  }
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) {
     return true;
@@ -86,6 +113,10 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 /** Expo Push Token do aparelho. Lança `AppError` com o motivo quando não há token disponível. */
 export async function getPushToken(): Promise<string> {
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    throw new AppError('Notificações push não funcionam no Expo Go. Use um development build.');
+  }
   if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
     throw new AppError('Notificações push só funcionam no Android e no iOS.');
   }
@@ -152,6 +183,10 @@ export async function requestPushNotification(request: PushRequest): Promise<voi
 
 /** Toques em notificações com o app aberto ou em segundo plano. */
 export function addNotificationTapListener(onTap: (data: NotificationData) => void): () => void {
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    return () => undefined;
+  }
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
     const data = parseNotificationData(response.notification.request.content.data);
     if (data) {
@@ -163,6 +198,10 @@ export function addNotificationTapListener(onTap: (data: NotificationData) => vo
 
 /** Notificação que abriu o app quando ele estava fechado. */
 export async function consumeInitialNotification(): Promise<NotificationData | null> {
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    return null;
+  }
   const response = await Notifications.getLastNotificationResponseAsync();
   if (!response) {
     return null;
@@ -173,6 +212,10 @@ export async function consumeInitialNotification(): Promise<NotificationData | n
 
 /** O token nativo pode mudar; nesse caso o Expo Push Token é registrado de novo. */
 export function addTokenRefreshListener(onRefresh: () => void): () => void {
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    return () => undefined;
+  }
   const subscription = Notifications.addPushTokenListener(() => onRefresh());
   return () => subscription.remove();
 }

@@ -54,10 +54,6 @@ const FIREBASE_MESSAGES: Record<string, string> = {
   'permission-denied': 'Você não tem permissão para realizar esta ação.',
   'firestore/permission-denied': 'Você não tem permissão para realizar esta ação.',
   unavailable: 'Sem conexão com o Firebase. Verifique a internet e tente novamente.',
-  'storage/unauthorized': 'Você não tem permissão para enviar esta imagem.',
-  'storage/canceled': 'Envio da imagem cancelado.',
-  'storage/retry-limit-exceeded': 'Não foi possível enviar a imagem. Verifique a conexão.',
-  'storage/quota-exceeded': 'O armazenamento de imagens atingiu o limite.',
 };
 
 function readErrorCode(error: unknown): string | null {

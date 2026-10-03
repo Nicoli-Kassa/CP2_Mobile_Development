@@ -36,7 +36,7 @@ Aplicativo de chat **individual e em grupo em tempo real**, feito em **React Nat
 | React Native | 0.83 | Interface nativa Android/iOS |
 | React | 19.2 | Componentes e hooks |
 | TypeScript | 5.9 (`strict`, sem `any`) | Tipagem do app e da API |
-| Firebase JS SDK | 12.x | Auth, Firestore, Realtime Database, Storage |
+| Firebase JS SDK | 12.x | Auth, Firestore, Realtime Database |
 | expo-notifications | 55.x | Permissão, Expo Push Token e toque na notificação |
 | expo-image-picker | 55.x | Foto da galeria ou da câmera |
 | expo-device | 55.x | Checagem de dispositivo físico para o push |
@@ -55,7 +55,7 @@ Aplicativo de chat **individual e em grupo em tempo real**, feito em **React Nat
 | **Realtime Database** | Todas as mensagens (individuais e de grupo), listeners em tempo real, prévia da última mensagem, estado da conexão (`.info/connected`) e o espelho de integrantes `groupMembers/` usado pelas regras. | [`chatService.ts`](src/services/chatService.ts), [`useChat.ts`](src/hooks/useChat.ts) |
 | **Cloud Firestore** | Perfis (públicos e privados), grupos, integrantes, limite (`memberLimit`), política de notificações, conversas individuais, tokens dos dispositivos e controle de idempotência do push. | [`userService.ts`](src/services/userService.ts), [`groupService.ts`](src/services/groupService.ts), [`notificationService.ts`](src/services/notificationService.ts) |
 | **Cloud Messaging (FCM)** | Entrega do push no Android. A API envia pelo Expo Push Service, que entrega no Android pelo FCM (credencial FCM V1 do projeto cadastrada no EAS) e no iOS pelo APNs. O payload leva `conversationId`, `conversationType` e `messageId`. | [`notificationSender.ts`](server/src/services/notificationSender.ts) |
-| **Storage** *(desligado no momento)* | Fotos de perfil e de grupo. Somente a URL final vai para o Firestore. Veja *Armazenamento das fotos*. | [`storageService.ts`](src/services/storageService.ts) |
+| **Cloudinary** *(fora do Firebase)* | Fotos de perfil e de grupo. Somente a URL final vai para o Firestore. Veja *Armazenamento das fotos*. | [`storageService.ts`](src/services/storageService.ts) |
 
 ### Estrutura dos dados
 
@@ -126,7 +126,7 @@ npm run dev            # http://localhost:3000/health (servidor local)
 
 1. **Criar o projeto** no [Firebase Console](https://console.firebase.google.com/).
 2. **Authentication** → Sign-in method → habilitar somente **E-mail/senha**.
-3. **Firestore Database**, **Realtime Database** e **Storage** → criar os bancos.
+3. **Firestore Database** e **Realtime Database** → criar os bancos.
 4. **App Web**: Configurações do projeto → Seus aplicativos → Web. Copie o objeto de configuração para [`firebaseConfig.json`](firebaseConfig.json). Ele contém só a configuração do SDK cliente, sem nenhuma credencial administrativa.
 5. **App Android** com o pacote `br.com.fiap.cp2chat`: baixe o `google-services.json` para a raiz do projeto. O [`app.config.ts`](app.config.ts) o inclui automaticamente.
 6. **Publicar as regras** (versionadas no repositório):
@@ -136,24 +136,37 @@ npm run dev            # http://localhost:3000/health (servidor local)
    firebase login
    firebase use <project-id>
    firebase deploy --only firestore:rules,database
-   # com o Storage ativo (veja "Armazenamento das fotos"): --only firestore:rules,database,storage
    ```
 
 ---
 
 ## 🖼️ Armazenamento das fotos
 
-**Serviço escolhido: Firebase Storage.**
-
-> **Situação atual: envio de fotos desligado.** O Storage ainda não está ativo no projeto `espw-mobile` (projetos novos exigem o plano Blaze). Enquanto isso, `app.json` → `expo.extra.photoUploadEnabled` está `false`: o cadastro e o formulário de grupo não mostram o seletor de foto, nada é enviado ao Storage e todos usam a imagem padrão. Para religar: ative o Storage no Firebase Console, publique o [`storage.rules`](storage.rules) e troque a chave para `true`.
+**Serviço escolhido: [Cloudinary](https://cloudinary.com)** (plano gratuito). O Firebase Storage não é usado: em projetos novos ele exige o plano Blaze.
 
 - A foto é escolhida pela galeria ou pela câmera ([`imagePickerService.ts`](src/services/imagePickerService.ts)), com pedido e tratamento das permissões.
-- O arquivo é enviado para `users/{uid}/profile.jpg` ou `groups/{groupId}/photo.jpg`, e **apenas a URL** (`getDownloadURL`) é gravada no Firestore. Nada é salvo em Base64.
+- O [`storageService.ts`](src/services/storageService.ts) faz um `POST` *multipart* para `https://api.cloudinary.com/v1_1/<cloudName>/image/upload` com os campos `file` e `upload_preset` (e `folder`: `cp2chat/users/{uid}` ou `cp2chat/groups/{groupId}`).
+- A resposta traz `secure_url`, e **apenas essa URL** é gravada no Firestore (`photoUrl` do usuário ou do grupo). Nada é salvo em Base64.
 - O componente [`Avatar`](src/components/Avatar.tsx) mostra uma imagem padrão ([`default-avatar.png`](assets/default-avatar.png) / [`default-group.png`](assets/default-group.png)) quando não há foto ou quando a imagem falha ao carregar.
-- Regras em [`storage.rules`](storage.rules):
-  - imagens de até 5 MB;
-  - somente o dono envia a foto de perfil;
-  - somente o proprietário do grupo envia a foto do grupo (conferido no Firestore).
+
+### Configuração (`app.json` → `expo.extra`)
+
+| Chave | Valor |
+| --- | --- |
+| `cloudinaryCloudName` | *Cloud name* da conta (aparece no Dashboard do Cloudinary). |
+| `cloudinaryUploadPreset` | Nome do upload preset **unsigned** criado abaixo. |
+| `photoUploadEnabled` | `true` mostra o seletor de foto no cadastro e no formulário de grupo; `false` esconde e todos usam a imagem padrão. |
+
+Os dois valores do Cloudinary são públicos (o upload unsigned não usa API secret), por isso ficam versionados no `app.json`.
+
+### Como criar o upload preset
+
+1. Crie uma conta gratuita em [cloudinary.com](https://cloudinary.com) e copie o **Cloud name** do Dashboard.
+2. Acesse **Settings → Upload → Upload presets → Add upload preset**.
+3. Em **Signing mode**, escolha **Unsigned**.
+4. (Recomendado) Restrinja o preset: formatos permitidos `jpg, png, webp` e tamanho máximo de 5 MB.
+5. Salve e copie o **nome do preset**.
+6. Preencha `cloudinaryCloudName` e `cloudinaryUploadPreset` no [`app.json`](app.json).
 
 ---
 
@@ -223,7 +236,7 @@ Somente o proprietário altera o grupo; `ownerId` e `createdAt` são imutáveis.
 
 ## 🔐 Regras de segurança
 
-Arquivos versionados: [`firestore.rules`](firestore.rules), [`database.rules.json`](database.rules.json) e [`storage.rules`](storage.rules). Nenhuma regra é aberta.
+Arquivos versionados: [`firestore.rules`](firestore.rules) e [`database.rules.json`](database.rules.json). Nenhuma regra é aberta.
 
 ### Firestore
 
@@ -304,6 +317,8 @@ curl https://cp2-chat-api.onrender.com/health
 > - o app espera até 60 s pela API ([`apiClient.ts`](src/services/apiClient.ts)), então a primeira chamada demora, mas não falha;
 > - um monitor gratuito do [UptimeRobot](https://uptimerobot.com) chama o `/health` a cada 5 min e mantém a API acordada durante a correção.
 
+![Monitor UptimeRobot](./docs/prints/uptimerobot.png)
+
 ### Publicar a API (Render)
 
 1. Crie uma conta em [render.com](https://render.com) entrando com o GitHub.
@@ -358,7 +373,7 @@ cloudshell download cp2-chat-api.json   # baixa a chave; depois apague a cópia:
 ├── App.tsx                       # SafeArea → AuthProvider → RootNavigator
 ├── app.json / app.config.ts      # Config Expo (plugins, apiUrl, google-services)
 ├── firebaseConfig.json           # Config do SDK cliente (sem segredos)
-├── firestore.rules · database.rules.json · storage.rules · firebase.json
+├── firestore.rules · database.rules.json · firebase.json
 ├── render.yaml                   # Deploy da API no Render
 ├── .env.example                  # Variáveis opcionais do app
 ├── assets/                       # Ícones e imagens padrão de perfil/grupo

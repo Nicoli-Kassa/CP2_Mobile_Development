@@ -1,37 +1,67 @@
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
 
-import { getFirebaseStorage } from './firebase';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '../config/appConfig';
+import { AppError, ConfigurationError } from '../utils/errors';
+import { isRecord } from '../utils/parse';
 
 /**
- * Upload das fotos para o Firebase Storage.
+ * Upload das fotos para o Cloudinary (upload *unsigned* com upload preset).
  *
- * Só a URL final (`getDownloadURL`) é gravada no Firestore — nunca a imagem
+ * Só a URL final (`secure_url`) é gravada no Firestore — nunca a imagem
  * em Base64.
  */
 
-/** Lê o arquivo local como Blob (XHR é o caminho mais estável no React Native). */
-function uriToBlob(uri: string): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = () => resolve(xhr.response as Blob);
-    xhr.onerror = () => reject(new Error('Não foi possível ler a imagem selecionada.'));
-    xhr.responseType = 'blob';
-    xhr.open('GET', uri, true);
-    xhr.send(null);
-  });
+function uploadEndpoint(): { url: string; preset: string } {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+    throw new ConfigurationError(
+      'Envio de fotos não configurado: defina cloudinaryCloudName e cloudinaryUploadPreset no app.json.',
+    );
+  }
+  return {
+    url: `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    preset: CLOUDINARY_UPLOAD_PRESET,
+  };
 }
 
-async function uploadImage(path: string, localUri: string): Promise<string> {
-  const blob = await uriToBlob(localUri);
-  const imageRef = ref(getFirebaseStorage(), path);
-  await uploadBytes(imageRef, blob, { contentType: blob.type || 'image/jpeg' });
-  return getDownloadURL(imageRef);
+async function appendFile(form: FormData, localUri: string, fileName: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    // Na web o FormData precisa de um Blob de verdade.
+    const blob = await (await fetch(localUri)).blob();
+    form.append('file', blob, fileName);
+    return;
+  }
+  // O fetch do Expo (SDK 57+) não aceita `{ uri, name, type }`: precisa de um Blob/File.
+  form.append('file', new File(localUri) as unknown as Blob, fileName);
+}
+
+async function uploadImage(folder: string, localUri: string): Promise<string> {
+  const { url, preset } = uploadEndpoint();
+
+  let response: Response;
+  try {
+    const form = new FormData();
+    await appendFile(form, localUri, 'photo.jpg');
+    form.append('upload_preset', preset);
+    form.append('folder', folder);
+    response = await fetch(url, { method: 'POST', body: form });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message.replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+    throw new AppError(`Não foi possível enviar a imagem${detail ? ` (${detail})` : ''}.`);
+  }
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok || !isRecord(body) || typeof body.secure_url !== 'string') {
+    const reason = isRecord(body) && isRecord(body.error) && typeof body.error.message === 'string' ? body.error.message : '';
+    throw new AppError(`Não foi possível enviar a imagem${reason ? ` (${reason})` : ''}. Tente novamente.`);
+  }
+  return body.secure_url;
 }
 
 export function uploadProfilePhoto(uid: string, localUri: string): Promise<string> {
-  return uploadImage(`users/${uid}/profile.jpg`, localUri);
+  return uploadImage(`cp2chat/users/${uid}`, localUri);
 }
 
 export function uploadGroupPhoto(groupId: string, localUri: string): Promise<string> {
-  return uploadImage(`groups/${groupId}/photo.jpg`, localUri);
+  return uploadImage(`cp2chat/groups/${groupId}`, localUri);
 }

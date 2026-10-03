@@ -2,15 +2,14 @@ import { getApp, getApps, initializeApp, type FirebaseApp, type FirebaseOptions 
 import { getAuth, initializeAuth, type Auth } from 'firebase/auth';
 import { getDatabase, type Database } from 'firebase/database';
 import { getFirestore, type Firestore } from 'firebase/firestore';
-import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 import firebaseConfigJson from '../../firebaseConfig.json';
 import { ConfigurationError } from '../utils/errors';
 import { authPersistence } from './authPersistence';
 
 /**
- * Inicialização única do Firebase (App, Authentication, Realtime Database,
- * Firestore e Storage).
+ * Inicialização única do Firebase (App, Authentication, Realtime Database
+ * e Firestore).
  *
  * A configuração do SDK cliente vem do arquivo versionado
  * `firebaseConfig.json` (exigência do trabalho). Esse objeto só identifica o
@@ -56,7 +55,6 @@ let appInstance: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let databaseInstance: Database | null = null;
 let firestoreInstance: Firestore | null = null;
-let storageInstance: FirebaseStorage | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
   assertConfigured();
@@ -92,11 +90,4 @@ export function getFirebaseFirestore(): Firestore {
     firestoreInstance = getFirestore(getFirebaseApp());
   }
   return firestoreInstance;
-}
-
-export function getFirebaseStorage(): FirebaseStorage {
-  if (!storageInstance) {
-    storageInstance = getStorage(getFirebaseApp());
-  }
-  return storageInstance;
 }

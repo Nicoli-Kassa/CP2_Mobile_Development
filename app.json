@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "cp2chat",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#4F46E5"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "br.com.fiap.cp2chat",
@@ -39,6 +34,14 @@
     },
     "plugins": [
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#4F46E5"
+        }
+      ],
+      [
         "expo-notifications",
         {
           "color": "#4F46E5",
@@ -55,7 +58,9 @@
     ],
     "extra": {
       "apiUrl": "https://cp2-chat-api.onrender.com",
-      "photoUploadEnabled": false,
+      "photoUploadEnabled": true,
+      "cloudinaryCloudName": "kxifhljm",
+      "cloudinaryUploadPreset": "cp2chat_unsigned",
       "eas": {
         "projectId": "53b596bf-ce19-4930-b19a-c5139d94ee67"
       }

@@ -19,6 +19,7 @@ import {
 import { disableDevice } from '../services/notificationService';
 import { fetchOwnProfile } from '../services/userService';
 import type { ChatUser, RegisterInput } from '../types/user';
+import { withTimeout } from '../utils/async';
 import { describeError } from '../utils/errors';
 
 /**
@@ -145,8 +146,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     () =>
       runAction('sign-out', async () => {
         if (user) {
-          // Falha aqui não impede o logout (ex.: sem internet).
-          await disableDevice(user.uid).catch(() => undefined);
+          // Falha ou demora aqui não impede o logout (ex.: sem internet).
+          await withTimeout(disableDevice(user.uid), 5000, 'timeout').catch(() => undefined);
         }
         await signOutUser();
       }),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Linking } from 'react-native';
+import { AppState, Linking } from 'react-native';
 
 import {
   addNotificationTapListener,
@@ -12,6 +12,7 @@ import {
   requestNotificationPermission,
 } from '../services/notificationService';
 import type { DeviceRegistrationState, NotificationData, NotificationPermissionState } from '../types/notification';
+import { withTimeout } from '../utils/async';
 import { describeError } from '../utils/errors';
 
 configureNotificationHandler();
@@ -51,7 +52,11 @@ export function useNotifications(
         return;
       }
       const token = await getPushToken();
-      await registerDevice(uid, token);
+      await withTimeout(
+        registerDevice(uid, token),
+        20000,
+        'Não foi possível registrar este dispositivo. Verifique a conexão e tente novamente.',
+      );
       setRegistration({ status: 'registered', token });
     } catch (failure) {
       setRegistration({
@@ -74,6 +79,19 @@ export function useNotifications(
       removeRefresh();
     };
   }, [register, attempt]);
+
+  // Se o registro falhou (ex.: sem rede), tenta de novo quando o app volta ao primeiro plano.
+  useEffect(() => {
+    if (registration.status !== 'unavailable' || permission === 'denied') {
+      return undefined;
+    }
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        setAttempt((value) => value + 1);
+      }
+    });
+    return () => subscription.remove();
+  }, [registration.status, permission]);
 
   useEffect(() => {
     const removeTap = addNotificationTapListener(onOpenConversation);

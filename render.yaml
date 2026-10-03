@@ -22,7 +22,7 @@ services:
         value: /etc/secrets/firebase-service-account.json
       # Não é segredo: é a mesma URL que está em firebaseConfig.json.
       - key: FIREBASE_DATABASE_URL
-        value: https://espw-mobile-default-rtdb.firebaseio.com
+        value: https://cp2-mobile-f6f46-default-rtdb.firebaseio.com
       # Opcional: token do Expo, se "Enhanced Security for Push" estiver ativo.
       - key: EXPO_ACCESS_TOKEN
         sync: false
