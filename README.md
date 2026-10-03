@@ -32,14 +32,15 @@ Aplicativo de chat **individual e em grupo em tempo real**, feito em **React Nat
 
 | Tecnologia | Versão | Uso |
 | --- | --- | --- |
-| **Expo SDK** | **55** (`expo ~55.0.0`) | Ambiente, build e módulos nativos |
-| React Native | 0.83 | Interface nativa Android/iOS |
+| **Expo SDK** | **57** (`expo ^57.0.0`) | Ambiente, build e módulos nativos |
+| React Native | 0.86 | Interface nativa Android/iOS |
 | React | 19.2 | Componentes e hooks |
-| TypeScript | 5.9 (`strict`, sem `any`) | Tipagem do app e da API |
+| TypeScript | 6.0 (`strict`, sem `any`) | Tipagem do app e da API |
 | Firebase JS SDK | 12.x | Auth, Firestore, Realtime Database |
-| expo-notifications | 55.x | Permissão, Expo Push Token e toque na notificação |
-| expo-image-picker | 55.x | Foto da galeria ou da câmera |
-| expo-device | 55.x | Checagem de dispositivo físico para o push |
+| expo-notifications | 57.x | Permissão, Expo Push Token e toque na notificação |
+| expo-image-picker | 57.x | Foto da galeria ou da câmera |
+| expo-file-system | 57.x | Leitura da foto local para o upload (`File` aceito pelo `fetch` do Expo) |
+| expo-device | 57.x | Checagem de dispositivo físico para o push |
 | React Navigation | 7.x | Pilhas de navegação |
 | **API**: Node.js + Express | Node 22 / Express 4 | Envio seguro das notificações |
 | **Render** | plano gratuito | Hospedagem da API com HTTPS e deploy automático |
@@ -98,11 +99,24 @@ groupMembers/{groupId}/{uid}: true     ← escrito só pela API, a partir do Fir
 ```bash
 git clone https://github.com/<usuario>/CP2_Mobile_Development.git
 cd CP2_Mobile_Development
-npm install
+npm install --legacy-peer-deps
 
 # A configuração do Firebase já está em firebaseConfig.json e a URL da API em app.json.
+```
 
-# Build de desenvolvimento (o push NÃO funciona no Expo Go desde o SDK 53):
+**Rodar rápido no celular, sem build (Expo Go):**
+
+```bash
+npm run start:clean      # expo start -c, 4 GB de heap e 2 workers (evita "out of memory" no Metro)
+```
+
+Escaneie o QR code com o app **Expo Go** (versão do SDK 57), com o celular na mesma rede do PC. Em redes que bloqueiam a conexão, use `npx expo start --tunnel`.
+
+> No Expo Go o chat funciona, mas **as notificações push ficam desativadas** (o Expo Go não as suporta desde o SDK 53). O app detecta o Expo Go, não carrega o `expo-notifications` e mostra o aviso na tela de notificações.
+
+**Build de desenvolvimento (push funciona):**
+
+```bash
 npx expo run:android          # Android via cabo/emulador
 npx expo run:ios              # iOS (macOS + Xcode)
 # ou na nuvem:
@@ -110,6 +124,15 @@ eas build --profile development --platform android
 ```
 
 Depois do build, `npx expo start --dev-client` sobe o bundler.
+
+**Gerar o APK (instalação direta, push funciona):**
+
+```bash
+npx eas-cli login
+npx eas-cli build -p android --profile preview
+```
+
+O perfil `preview` (distribuição interna) gera um `.apk`. O link para baixar aparece no terminal e em expo.dev. O EAS envia o que está no git, então faça commit antes.
 
 ### API
 
@@ -132,11 +155,14 @@ npm run dev            # http://localhost:3000/health (servidor local)
 6. **Publicar as regras** (versionadas no repositório):
 
    ```bash
-   npm i -g firebase-tools
-   firebase login
-   firebase use <project-id>
-   firebase deploy --only firestore:rules,database
+   npx firebase-tools login
+   npx firebase-tools use <project-id>
+   npx firebase-tools deploy --only firestore:rules,database
    ```
+
+7. **API (Render)**: gere uma chave em Configurações do projeto → Contas de serviço, coloque-a no *Secret File* `firebase-service-account.json` e confira `FIREBASE_DATABASE_URL` com a URL do Realtime Database do **mesmo** projeto. Se a API usar a conta de serviço de outro projeto, ela recusa os tokens do app e o perfil de outros usuários mostra "Sua sessão expirou".
+
+> **Cota gratuita.** O plano Spark do Firestore tem limite diário (20 mil gravações, 50 mil leituras). Se o app mostrar `resource-exhausted: Quota exceeded`, veja Firestore → Uso. A cota zera à meia-noite no horário do Pacífico. Use um projeto próprio, sem compartilhar a chave com outras pessoas.
 
 ---
 
@@ -184,7 +210,7 @@ eas credentials              # Android → Push Notifications: FCM V1 → envie 
 
 - **Android**: precisa do `google-services.json` na raiz e da chave **FCM V1** cadastrada no EAS (Firebase Console → Contas de serviço → gerar chave → `eas credentials`). O app cria o canal `messages` com importância alta e pede a permissão `POST_NOTIFICATIONS` (Android 13+).
 - **iOS**: precisa de conta Apple Developer paga, build pelo EAS ou Xcode e aparelho físico. O EAS cria a chave APNs.
-- **Expo Go não é suportado** para push. Use development build ou build nativo.
+- **Expo Go não é suportado** para push. Use development build ou build nativo. Dentro do Expo Go o app apenas desativa as notificações e segue funcionando.
 
 ### Estados tratados
 
@@ -431,24 +457,38 @@ Os arquivos ficam em [`docs/prints/`](docs/prints/); veja os nomes esperados em 
 
 | Login | Cadastro | Conversas |
 | --- | --- | --- |
-| ![Login](docs/prints/login.png) | ![Cadastro](docs/prints/cadastro.png) | ![Conversas](docs/prints/conversas.png) |
+| ![Login](./docs/prints/login.jpg) | ![Cadastro](./docs/prints/cadastro.jpg) | ![Conversas](./docs/prints/conversas.jpg) |
 
-| Grupo | Chat em grupo | Perfil |
+| Grupo (1) | Grupo (2) | Chat individual |
 | --- | --- | --- |
-| ![Grupo](docs/prints/grupo-form.png) | ![Chat em grupo](docs/prints/chat-grupo.png) | ![Perfil](docs/prints/perfil.png) |
+| ![Grupo](./docs/prints/grupo-form1.jpg) | ![Grupo](./docs/prints/grupo-form2.jpg) | ![Chat individual](./docs/prints/chat-individual.jpg) |
+
+| Chat em grupo | Integrantes | Perfil |
+| --- | --- | --- |
+| ![Chat em grupo](./docs/prints/chat-grupo.jpg) | ![Integrantes](./docs/prints/integrantes.jpg) | ![Perfil](./docs/prints/perfil.jpg) |
 
 ### Evidência de notificação recebida
 
-| Push na bandeja do sistema | Registro na API |
-| --- | --- |
-| ![Push recebido](docs/prints/push-recebido.png) | ![Log da API](docs/prints/push-api-log.png) |
+Push na bandeja do sistema
+
+![Push recebido](./docs/prints/push-recebido.jpg)
+
+Log da API ao enviar o push
+
+![Log da API de push](./docs/prints/push-api-log.png)
+
+### Evidências dos serviços
+
+Firestore
+
+![Firestore](./docs/prints/firestore.png)
+
+Realtime Database
+
+![Realtime Database](./docs/prints/realtime-database.png)
+
+Monitor de disponibilidade da API (UptimeRobot)
+
+![Monitor UptimeRobot](./docs/prints/uptimerobot.png)
 
 ---
-
-## ✅ Tratamento de erros e estados
-
-- **Loading e estados vazios:** loading em sessão, conversas, usuários, grupo, mensagens e perfil; estado vazio para "nenhuma conversa", "nenhum usuário disponível" e "conversa sem mensagens".
-- **Erros de autenticação e sessão:** credenciais inválidas, e-mail já cadastrado e sessão expirada (401 da API) viram mensagens em português ([`errors.ts`](src/utils/errors.ts)), sem códigos internos.
-- **Erros de grupo:** grupo sem vagas, limite menor que a quantidade atual, ação de quem não é proprietário e integrante removido (o chat é bloqueado).
-- **Erros de mensagem:** falha no envio mantém o texto no campo; falha no push é avisada sem desfazer a mensagem.
-- **Notificações e conectividade:** permissão negada, dispositivo sem token, falha ao registrar o token e perda de conexão (`.info/connected`).
