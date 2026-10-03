@@ -1,0 +1,34 @@
+node_modules/
+server/node_modules/
+server/dist/
+server/.deploy/
+
+# Builds nativos gerados pelo prebuild / EAS
+android/
+ios/
+.expo/
+dist/
+web-build/
+
+# Segredos: nunca versionar
+.env
+.env.local
+server/.env
+*serviceAccount*.json
+*firebase-adminsdk*.json
+firebaseAdminCredentials.json
+# Qualquer JSON solto em server/ (ex.: chave da conta de serviço baixada do Google Cloud)
+server/*.json
+!server/package.json
+!server/package-lock.json
+!server/tsconfig.json
+*.p8
+*.p12
+*.key
+*.jks
+*.keystore
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log

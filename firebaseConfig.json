@@ -1,0 +1,9 @@
+{
+  "apiKey": "AIzaSyDkkVWarn0IQ345ON4WF_0WFfKMrmJGPU4",
+  "authDomain": "espw-mobile.firebaseapp.com",
+  "databaseURL": "https://espw-mobile-default-rtdb.firebaseio.com",
+  "projectId": "espw-mobile",
+  "storageBucket": "espw-mobile.firebasestorage.app",
+  "messagingSenderId": "15215341539",
+  "appId": "1:15215341539:web:d681a647c59ff831e3fad6"
+}

@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  CP2 Chat API - AWS Lambda (Node.js 22) atras de um API Gateway HTTP API com HTTPS.
+  Publicado por server/scripts/aws.mjs (npm run deploy:aws).
+
+Parameters:
+  FirebaseProjectId:
+    Type: String
+    MinLength: 1
+    Description: ID do projeto Firebase.
+  FirebaseClientEmail:
+    Type: String
+    MinLength: 1
+    Description: E-mail da conta de servico usada pela API.
+  FirebasePrivateKey:
+    Type: String
+    NoEcho: true
+    MinLength: 1
+    Description: Chave privada da conta de servico (quebras de linha como \n literal).
+  FirebaseDatabaseUrl:
+    Type: String
+    AllowedPattern: '^https://.+'
+    Description: URL do Realtime Database.
+  ExpoAccessToken:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Opcional. Token do Expo, se "Enhanced Security for Push" estiver ativo.
+  LambdaRoleArn:
+    Type: String
+    Default: ''
+    Description: >-
+      ARN de uma role IAM existente para a Lambda. Na AWS Academy (Learner Lab) use a LabRole,
+      pois o laboratorio nao permite criar roles. Vazio = o template cria uma role minima.
+  ThrottlingRateLimit:
+    Type: Number
+    Default: 20
+    MinValue: 1
+    Description: Requisicoes por segundo aceitas pelo API Gateway (protege os creditos contra abuso).
+  ThrottlingBurstLimit:
+    Type: Number
+    Default: 40
+    MinValue: 1
+    Description: Pico de requisicoes simultaneas aceitas pelo API Gateway.
+
+Conditions:
+  CreateRole: !Equals [!Ref LambdaRoleArn, '']
+
+Resources:
+  # Role minima: somente gravar logs no CloudWatch. A API nao usa outros servicos da AWS;
+  # o acesso ao Firebase e feito com a conta de servico do Google.
+  ApiFunctionRole:
+    Type: AWS::IAM::Role
+    Condition: CreateRole
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  ApiFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}
+      RetentionInDays: 14
+
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: ApiFunctionLogGroup
+    Properties:
+      FunctionName: !Ref AWS::StackName
+      Description: CP2 Chat API (Express + Firebase Admin SDK)
+      Runtime: nodejs22.x
+      Handler: dist/lambda.handler
+      # Pasta gerada pelo script de deploy; `aws cloudformation package` a compacta e envia ao S3.
+      Code: ../.deploy/lambda
+      MemorySize: 1024
+      # O API Gateway HTTP API encerra a requisicao em 30 s.
+      Timeout: 25
+      Role: !If [CreateRole, !GetAtt ApiFunctionRole.Arn, !Ref LambdaRoleArn]
+      Environment:
+        Variables:
+          NODE_ENV: production
+          NODE_OPTIONS: --enable-source-maps
+          FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
+          FIREBASE_CLIENT_EMAIL: !Ref FirebaseClientEmail
+          FIREBASE_PRIVATE_KEY: !Ref FirebasePrivateKey
+          FIREBASE_DATABASE_URL: !Ref FirebaseDatabaseUrl
+          EXPO_ACCESS_TOKEN: !Ref ExpoAccessToken
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Ref AWS::StackName
+      ProtocolType: HTTP
+      # O app nativo nao precisa de CORS; isto libera a versao web (Expo Web).
+      # A autenticacao e por Bearer token, sem cookies, entao qualquer origem e segura.
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [authorization, content-type]
+        MaxAge: 600
+
+  HttpApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ApiFunction.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 29000
+
+  # Uma rota coringa: o roteamento (/health, /notifications, /users, /groups) fica no Express.
+  HttpApiDefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: $default
+      Target: !Sub integrations/${HttpApiIntegration}
+
+  HttpApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingRateLimit: !Ref ThrottlingRateLimit
+        ThrottlingBurstLimit: !Ref ThrottlingBurstLimit
+
+  ApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ApiFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*
+
+Outputs:
+  ApiUrl:
+    Description: URL publica (HTTPS) da API. Use em app.json -> expo.extra.apiUrl.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  HealthUrl:
+    Description: Health check publico.
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/health
+  FunctionName:
+    Description: Nome da funcao Lambda (logs em /aws/lambda/<nome> no CloudWatch).
+    Value: !Ref ApiFunction

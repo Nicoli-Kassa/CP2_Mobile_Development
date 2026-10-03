@@ -1,0 +1,37 @@
+{
+  "name": "cp2-chat-firebase",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~55.0.12",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-navigation/elements": "^2.9.40",
+    "@react-navigation/native": "^7.3.18",
+    "@react-navigation/native-stack": "^7.18.10",
+    "expo": "~55.0.0",
+    "expo-constants": "~55.0.17",
+    "expo-device": "~55.0.21",
+    "expo-image-picker": "~55.0.24",
+    "expo-notifications": "~55.0.27",
+    "expo-status-bar": "~55.0.6",
+    "firebase": "^12.18.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.10",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.10",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

@@ -1,0 +1,29 @@
+{
+  "name": "cp2-chat-api",
+  "version": "1.0.0",
+  "description": "API do CP2 Chat: valida o Firebase ID Token e envia push notifications (Render ou AWS Lambda)",
+  "main": "dist/server.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "deploy:aws": "node scripts/aws.mjs deploy",
+    "destroy:aws": "node scripts/aws.mjs destroy"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
+    "firebase-admin": "^13.10.0",
+    "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/node": "^22.20.4",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "CP2 Chat",
+    "slug": "cp2-chat-firebase",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "cp2chat",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4F46E5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.fiap.cp2chat",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "package": "br.com.fiap.cp2chat",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4F46E5"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#4F46E5",
+          "defaultChannel": "messages"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O CP2 Chat usa suas fotos para a foto de perfil e dos grupos.",
+          "cameraPermission": "O CP2 Chat usa a câmera para tirar a foto de perfil e dos grupos."
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "https://cp2-chat-api.onrender.com",
+      "photoUploadEnabled": false,
+      "eas": {
+        "projectId": "53b596bf-ce19-4930-b19a-c5139d94ee67"
+      }
+    },
+    "owner": "amykassa"
+  }
+}

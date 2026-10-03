@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "15215341539",
+    "firebase_url": "https://espw-mobile-default-rtdb.firebaseio.com",
+    "project_id": "espw-mobile",
+    "storage_bucket": "espw-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:15215341539:android:eed25e7ac89a19d8e3fad6",
+        "android_client_info": {
+          "package_name": "br.com.fiap.cp2chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0_2akUkONBU4nD7OYSH_tSBJX19eKGm0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

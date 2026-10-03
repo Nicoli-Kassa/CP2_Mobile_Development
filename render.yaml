@@ -1,0 +1,28 @@
+# Blueprint do Render para publicar a API (server/) com HTTPS.
+# Render → New → Blueprint → selecione este repositório.
+#
+# A chave da conta de serviço NUNCA fica aqui: ela é enviada como Secret File
+# no painel do Render (Environment → Secret Files → firebase-service-account.json)
+# e fica disponível em /etc/secrets/firebase-service-account.json.
+services:
+  - type: web
+    name: cp2-chat-api
+    runtime: node
+    rootDir: server
+    plan: free
+    region: virginia
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: FIREBASE_SERVICE_ACCOUNT_FILE
+        value: /etc/secrets/firebase-service-account.json
+      # Não é segredo: é a mesma URL que está em firebaseConfig.json.
+      - key: FIREBASE_DATABASE_URL
+        value: https://espw-mobile-default-rtdb.firebaseio.com
+      # Opcional: token do Expo, se "Enhanced Security for Push" estiver ativo.
+      - key: EXPO_ACCESS_TOKEN
+        sync: false
