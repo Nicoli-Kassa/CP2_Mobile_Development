@@ -306,6 +306,8 @@ As regras do Realtime Database não conseguem consultar o Firestore. Por isso:
 - **URL pública:** `https://cp2-chat-api.onrender.com`.
 - **Alternativa:** a mesma API também pode ser publicada na **AWS** (Lambda + API Gateway). Veja [`server/aws/README.md`](server/aws/README.md).
 
+![API online](./docs/prints/api-online.png)
+
 ### Endpoints
 
 | Método e rota | Auth | Descrição |
@@ -453,7 +455,7 @@ cloudshell download cp2-chat-api.json   # baixa a chave; depois apague a cópia:
 
 ## 📸 Prints das telas
 
-Os arquivos ficam em [`docs/prints/`](docs/prints/); veja os nomes esperados em [`COMO-ADICIONAR.md`](docs/prints/COMO-ADICIONAR.md).
+Os arquivos ficam em [`docs/prints/`](docs/prints/).
 
 | Login | Cadastro | Conversas |
 | --- | --- | --- |
