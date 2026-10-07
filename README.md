@@ -16,16 +16,14 @@ Aplicativo de chat **individual e em grupo em tempo real**, feito em **React Nat
 
 ---
 
-## 🔗 Links da entrega
+## 🔗 Links importantes
 
 | Item | Valor |
 | --- | --- |
 | Repositório | `https://github.com/<usuario>/CP2_Mobile_Development` |
 | **API online (HTTPS, Render)** | `https://cp2-chat-api.onrender.com` |
 | Health check | `https://cp2-chat-api.onrender.com/health` |
-
-> A mesma URL da API está em [`app.json`](app.json) → `expo.extra.apiUrl`. Quem for corrigir não precisa configurar nada.
-
+ 
 ---
 
 ## 🧰 Tecnologias utilizadas
